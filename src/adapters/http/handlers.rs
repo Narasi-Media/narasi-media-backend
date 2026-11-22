@@ -1,9 +1,13 @@
 use crate::adapters::http::dto::{
-    ApiResponse, MassOrderRequest, PlaceOrderRequest, RejectDepositRequest, RequestDepositRequest,
-    SubmitDepositProofRequest,
+    ApiResponse, BatchMarkupRequest, CreateCategoryRequest, CreateServiceRequest,
+    MassOrderRequest, PlaceOrderRequest, RejectDepositRequest, RequestDepositRequest,
+    SubmitDepositProofRequest, UpdateCategoryRequest, UpdateServiceRequest,
 };
 use crate::application::use_cases::{PlaceOrderInput, RequestDepositInput};
-use crate::domain::value_objects::{DepositId, Money, ServiceId, UserId};
+use crate::domain::entity::{Category, Service};
+use crate::domain::value_objects::{
+    CategoryId, DepositId, Money, ServiceId, ServiceType, UserId,
+};
 use crate::AppState;
 use axum::{
     extract::{Path, State},
@@ -239,6 +243,278 @@ pub async fn admin_reject_deposit(
         Ok(deposit) => Json(ApiResponse::ok(deposit, "Deposit ditolak")).into_response(),
         Err(e) => (
             StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn admin_create_service(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<CreateServiceRequest>,
+) -> impl IntoResponse {
+    let service_id = match payload.id {
+        Some(id) if !id.trim().is_empty() => ServiceId::from_string(id),
+        _ => {
+            let num = {
+                use rand::Rng;
+                let mut rng = rand::thread_rng();
+                rng.gen_range(100..=999)
+            };
+            ServiceId::from_string(format!("SRV-{}", num))
+        }
+    };
+
+    let service = Service {
+        id: service_id,
+        category_id: CategoryId::from_string(payload.category_id),
+        provider_id: payload.provider_id,
+        provider_service_id: payload.provider_service_id,
+        name: payload.name,
+        service_type: payload.service_type.unwrap_or(ServiceType::Default),
+        price_original: Money::from_idr(payload.price_original),
+        price_user: Money::from_idr(payload.price_user),
+        min_order: payload.min_order,
+        max_order: payload.max_order,
+        refill_supported: payload.refill_supported,
+        refill_days: payload.refill_days,
+        description: payload.description,
+        is_active: payload.is_active.unwrap_or(true),
+    };
+
+    match state.service_repo.save(&service).await {
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(ApiResponse::ok(service, "Layanan baru berhasil ditambahkan")),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn admin_update_service(
+    State(state): State<Arc<AppState>>,
+    Path(service_id_str): Path<String>,
+    Json(payload): Json<UpdateServiceRequest>,
+) -> impl IntoResponse {
+    let service_id = ServiceId::from_string(service_id_str);
+    let existing = match state.service_repo.find_by_id(&service_id).await {
+        Ok(Some(s)) => s,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::<()>::error("Layanan tidak ditemukan")),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(e.to_string())),
+            )
+                .into_response()
+        }
+    };
+
+    let updated = Service {
+        id: service_id,
+        category_id: CategoryId::from_string(payload.category_id),
+        provider_id: payload.provider_id.or(existing.provider_id),
+        provider_service_id: payload.provider_service_id.or(existing.provider_service_id),
+        name: payload.name,
+        service_type: payload.service_type.unwrap_or(existing.service_type),
+        price_original: Money::from_idr(payload.price_original),
+        price_user: Money::from_idr(payload.price_user),
+        min_order: payload.min_order,
+        max_order: payload.max_order,
+        refill_supported: payload.refill_supported,
+        refill_days: payload.refill_days,
+        description: payload.description,
+        is_active: payload.is_active,
+    };
+
+    match state.service_repo.save(&updated).await {
+        Ok(_) => Json(ApiResponse::ok(updated, "Layanan berhasil diperbarui")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn admin_delete_service(
+    State(state): State<Arc<AppState>>,
+    Path(service_id_str): Path<String>,
+) -> impl IntoResponse {
+    let service_id = ServiceId::from_string(service_id_str);
+    match state.service_repo.delete(&service_id).await {
+        Ok(_) => Json(ApiResponse::ok((), "Layanan berhasil dihapus")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn admin_toggle_service(
+    State(state): State<Arc<AppState>>,
+    Path(service_id_str): Path<String>,
+) -> impl IntoResponse {
+    let service_id = ServiceId::from_string(service_id_str);
+    let mut service = match state.service_repo.find_by_id(&service_id).await {
+        Ok(Some(s)) => s,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::<()>::error("Layanan tidak ditemukan")),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(e.to_string())),
+            )
+                .into_response()
+        }
+    };
+
+    let new_state = service.toggle_active();
+    match state.service_repo.save(&service).await {
+        Ok(_) => Json(ApiResponse::ok(
+            service,
+            format!(
+                "Status layanan kini {}",
+                if new_state { "Aktif (Tampil)" } else { "Nonaktif (Sembunyi)" }
+            ),
+        ))
+        .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn admin_batch_markup(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<BatchMarkupRequest>,
+) -> impl IntoResponse {
+    let services = match state.service_repo.list_all().await {
+        Ok(s) => s,
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(e.to_string())),
+            )
+                .into_response()
+        }
+    };
+
+    let mut updated_count = 0;
+    for mut srv in services {
+        let matches_category = match &payload.category_id {
+            Some(cat_id) if !cat_id.trim().is_empty() && cat_id != "all" => {
+                srv.category_id.as_str() == cat_id.as_str()
+            }
+            _ => true,
+        };
+
+        if matches_category {
+            srv.apply_markup_percentage(payload.percentage);
+            if let Ok(_) = state.service_repo.save(&srv).await {
+                updated_count += 1;
+            }
+        }
+    }
+
+    Json(ApiResponse::ok(
+        updated_count,
+        format!(
+            "Berhasil memperbarui harga {} layanan dengan markup {:.1}%",
+            updated_count, payload.percentage
+        ),
+    ))
+    .into_response()
+}
+
+pub async fn admin_create_category(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<CreateCategoryRequest>,
+) -> impl IntoResponse {
+    let category_id = match payload.id {
+        Some(id) if !id.trim().is_empty() => CategoryId::from_string(id),
+        _ => {
+            let slug = payload
+                .name
+                .to_lowercase()
+                .chars()
+                .filter(|c| c.is_alphanumeric() || *c == '-')
+                .collect::<String>();
+            CategoryId::from_string(format!("cat-{}", slug))
+        }
+    };
+
+    let category = Category {
+        id: category_id,
+        name: payload.name,
+        icon: payload.icon.unwrap_or_else(|| "tag".to_string()),
+        sort_order: payload.sort_order.unwrap_or(99),
+    };
+
+    match state.service_repo.save_category(&category).await {
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(ApiResponse::ok(category, "Kategori berhasil dibuat")),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn admin_update_category(
+    State(state): State<Arc<AppState>>,
+    Path(category_id_str): Path<String>,
+    Json(payload): Json<UpdateCategoryRequest>,
+) -> impl IntoResponse {
+    let category_id = CategoryId::from_string(category_id_str);
+    let category = Category {
+        id: category_id,
+        name: payload.name,
+        icon: payload.icon,
+        sort_order: payload.sort_order,
+    };
+
+    match state.service_repo.save_category(&category).await {
+        Ok(_) => Json(ApiResponse::ok(category, "Kategori berhasil diperbarui")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn admin_delete_category(
+    State(state): State<Arc<AppState>>,
+    Path(category_id_str): Path<String>,
+) -> impl IntoResponse {
+    let category_id = CategoryId::from_string(category_id_str);
+    match state.service_repo.delete_category(&category_id).await {
+        Ok(_) => Json(ApiResponse::ok((), "Kategori berhasil dihapus")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::<()>::error(e.to_string())),
         )
             .into_response(),

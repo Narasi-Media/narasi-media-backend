@@ -142,3 +142,43 @@ fn test_deposit_manual_qris_lifecycle() {
     assert_eq!(deposit.status, DepositStatus::Success);
     assert_eq!(credited.amount(), 55_000);
 }
+
+#[test]
+fn test_service_markup_and_toggle() {
+    let mut service = Service {
+        id: ServiceId::from_string("SRV-MUTATE"),
+        category_id: CategoryId::from_string("CAT-1"),
+        provider_id: Some("prov-1".to_string()),
+        provider_service_id: Some("1".to_string()),
+        name: "Test Dynamic Service".to_string(),
+        service_type: ServiceType::Default,
+        price_original: Money::from_idr(10_000),
+        price_user: Money::from_idr(12_000),
+        min_order: 100,
+        max_order: 5_000,
+        refill_supported: true,
+        refill_days: 30,
+        description: "Test".to_string(),
+        is_active: true,
+    };
+
+    // Apply +25% markup
+    service.apply_markup_percentage(25.0);
+    // 10.000 * 1.25 = 12.500
+    assert_eq!(service.price_user.amount(), 12_500);
+
+    // Toggle active
+    let active_now = service.toggle_active();
+    assert!(!active_now);
+    assert!(!service.is_active);
+
+    // Inactive service cannot calculate order price
+    let err = service.calculate_price(500).unwrap_err();
+    assert_eq!(err, DomainError::ServiceInactive);
+
+    // Toggle back
+    let active_again = service.toggle_active();
+    assert!(active_again);
+    assert!(service.is_active);
+    assert_eq!(service.calculate_price(1_000).unwrap().amount(), 12_500);
+}

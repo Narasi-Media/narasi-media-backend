@@ -1,4 +1,4 @@
-use crate::domain::value_objects::DepositMethod;
+use crate::domain::value_objects::{DepositMethod, ServiceType};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -32,6 +32,62 @@ pub struct SubmitDepositProofRequest {
 #[derive(Debug, Deserialize)]
 pub struct RejectDepositRequest {
     pub reason: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateServiceRequest {
+    pub id: Option<String>,
+    pub category_id: String,
+    pub name: String,
+    pub service_type: Option<ServiceType>,
+    pub price_original: i64,
+    pub price_user: i64,
+    pub min_order: u32,
+    pub max_order: u32,
+    pub refill_supported: bool,
+    pub refill_days: u32,
+    pub description: String,
+    pub provider_id: Option<String>,
+    pub provider_service_id: Option<String>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateServiceRequest {
+    pub category_id: String,
+    pub name: String,
+    pub service_type: Option<ServiceType>,
+    pub price_original: i64,
+    pub price_user: i64,
+    pub min_order: u32,
+    pub max_order: u32,
+    pub refill_supported: bool,
+    pub refill_days: u32,
+    pub description: String,
+    pub provider_id: Option<String>,
+    pub provider_service_id: Option<String>,
+    pub is_active: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BatchMarkupRequest {
+    pub percentage: f64,
+    pub category_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateCategoryRequest {
+    pub id: Option<String>,
+    pub name: String,
+    pub icon: Option<String>,
+    pub sort_order: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateCategoryRequest {
+    pub name: String,
+    pub icon: String,
+    pub sort_order: u32,
 }
 
 #[derive(Debug, Serialize)]

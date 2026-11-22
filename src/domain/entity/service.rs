@@ -44,4 +44,20 @@ impl Service {
 
         Ok(Money::calculate_order_price(quantity, self.price_user))
     }
+
+    pub fn update_pricing(&mut self, price_original: Money, price_user: Money) {
+        self.price_original = price_original;
+        self.price_user = price_user;
+    }
+
+    pub fn apply_markup_percentage(&mut self, percentage: f64) {
+        let orig = self.price_original.amount() as f64;
+        let new_user = (orig * (1.0 + percentage / 100.0)).round() as i64;
+        self.price_user = Money::from_idr(new_user);
+    }
+
+    pub fn toggle_active(&mut self) -> bool {
+        self.is_active = !self.is_active;
+        self.is_active
+    }
 }

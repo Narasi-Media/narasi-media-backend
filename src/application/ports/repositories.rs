@@ -27,8 +27,11 @@ pub trait ServiceRepository: Send + Sync {
     async fn list_all(&self) -> Result<Vec<Service>, DomainError>;
     async fn list_by_category(&self, category_id: &CategoryId) -> Result<Vec<Service>, DomainError>;
     async fn list_categories(&self) -> Result<Vec<Category>, DomainError>;
+    async fn find_category_by_id(&self, id: &CategoryId) -> Result<Option<Category>, DomainError>;
     async fn save(&self, service: &Service) -> Result<(), DomainError>;
+    async fn delete(&self, id: &ServiceId) -> Result<(), DomainError>;
     async fn save_category(&self, category: &Category) -> Result<(), DomainError>;
+    async fn delete_category(&self, id: &CategoryId) -> Result<(), DomainError>;
 }
 
 #[async_trait]

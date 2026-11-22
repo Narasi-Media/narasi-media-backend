@@ -50,15 +50,32 @@ impl ServiceRepository for InMemoryServiceRepository {
         Ok(list)
     }
 
+    async fn find_category_by_id(&self, id: &CategoryId) -> Result<Option<Category>, DomainError> {
+        let guard = self.categories.read().await;
+        Ok(guard.get(id).cloned())
+    }
+
     async fn save(&self, service: &Service) -> Result<(), DomainError> {
         let mut guard = self.services.write().await;
         guard.insert(service.id.clone(), service.clone());
         Ok(())
     }
 
+    async fn delete(&self, id: &ServiceId) -> Result<(), DomainError> {
+        let mut guard = self.services.write().await;
+        guard.remove(id);
+        Ok(())
+    }
+
     async fn save_category(&self, category: &Category) -> Result<(), DomainError> {
         let mut guard = self.categories.write().await;
         guard.insert(category.id.clone(), category.clone());
+        Ok(())
+    }
+
+    async fn delete_category(&self, id: &CategoryId) -> Result<(), DomainError> {
+        let mut guard = self.categories.write().await;
+        guard.remove(id);
         Ok(())
     }
 }

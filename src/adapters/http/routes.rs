@@ -1,7 +1,7 @@
 use crate::adapters::http::handlers::*;
 use crate::AppState;
 use axum::{
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 use std::sync::Arc;
@@ -26,7 +26,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/api/deposits/:deposit_id/proof",
             post(submit_deposit_proof),
         )
-        // Admin routes
+        // Admin Deposit routes
         .route("/api/admin/deposits/pending", get(admin_list_pending_deposits))
         .route(
             "/api/admin/deposits/:deposit_id/approve",
@@ -35,6 +35,22 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route(
             "/api/admin/deposits/:deposit_id/reject",
             post(admin_reject_deposit),
+        )
+        // Admin Product & Service CRUD
+        .route("/api/admin/services", post(admin_create_service))
+        .route(
+            "/api/admin/services/:id",
+            put(admin_update_service).delete(admin_delete_service),
+        )
+        .route(
+            "/api/admin/services/:id/toggle",
+            post(admin_toggle_service),
+        )
+        .route("/api/admin/services/batch-markup", post(admin_batch_markup))
+        .route("/api/admin/categories", post(admin_create_category))
+        .route(
+            "/api/admin/categories/:id",
+            put(admin_update_category).delete(admin_delete_category),
         )
         .layer(cors)
         .with_state(state)
