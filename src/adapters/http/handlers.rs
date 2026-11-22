@@ -1,12 +1,12 @@
 use crate::adapters::http::dto::{
     ApiResponse, BatchMarkupRequest, CreateCategoryRequest, CreateServiceRequest,
     MassOrderRequest, PlaceOrderRequest, RejectDepositRequest, RequestDepositRequest,
-    SubmitDepositProofRequest, UpdateCategoryRequest, UpdateServiceRequest,
+    SubmitDepositProofRequest, UpdateCategoryRequest, UpdateOrderStatusRequest, UpdateServiceRequest,
 };
 use crate::application::use_cases::{PlaceOrderInput, RequestDepositInput};
 use crate::domain::entity::{Category, Service};
 use crate::domain::value_objects::{
-    CategoryId, DepositId, Money, ServiceId, ServiceType, UserId,
+    CategoryId, DepositId, Money, OrderId, OrderStatus, ServiceId, ServiceType, UserId,
 };
 use crate::AppState;
 use axum::{
@@ -513,6 +513,72 @@ pub async fn admin_delete_category(
     let category_id = CategoryId::from_string(category_id_str);
     match state.service_repo.delete_category(&category_id).await {
         Ok(_) => Json(ApiResponse::ok((), "Kategori berhasil dihapus")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn admin_list_all_orders(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.order_repo.list_all().await {
+        Ok(orders) => Json(ApiResponse::ok(orders, "All orders retrieved")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn admin_update_order_status(
+    State(state): State<Arc<AppState>>,
+    Path(order_id_str): Path<String>,
+    Json(payload): Json<UpdateOrderStatusRequest>,
+) -> impl IntoResponse {
+    let order_id = OrderId::from_string(order_id_str);
+    let mut order = match state.order_repo.find_by_id(&order_id).await {
+        Ok(Some(o)) => o,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::<()>::error("Order tidak ditemukan")),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(e.to_string())),
+            )
+                .into_response()
+        }
+    };
+
+    let old_status = order.status;
+    let remains = payload.remains.unwrap_or(order.remains);
+    let start_count = payload.start_count.unwrap_or(order.start_count);
+    order.update_status(payload.status, start_count, remains, payload.error_message);
+
+    // If order was canceled or partial from an active state, calculate and refund to user
+    if (order.status == OrderStatus::Canceled || order.status == OrderStatus::Partial)
+        && old_status != OrderStatus::Canceled
+        && old_status != OrderStatus::Partial
+    {
+        let refund_amount = order.calculate_partial_refund();
+        if refund_amount.amount() > 0 {
+            if let Ok(Some(mut user)) = state.user_repo.find_by_id(&order.user_id).await {
+                let note = format!("Refund pesanan #{} ({:?})", order.id, order.status);
+                let log = user.credit(refund_amount, note);
+                let _ = state.user_repo.save(&user).await;
+                let _ = state.user_repo.save_balance_log(&log).await;
+            }
+        }
+    }
+
+    match state.order_repo.save(&order).await {
+        Ok(_) => Json(ApiResponse::ok(order, "Status pesanan berhasil diperbarui")).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::<()>::error(e.to_string())),

@@ -14,7 +14,7 @@ use crate::application::use_cases::{
     ApproveDepositUseCase, ClaimRefillUseCase, MassOrderUseCase, PlaceOrderUseCase,
     RequestDepositUseCase, SyncOrderUseCase,
 };
-use crate::domain::entity::{Category, Service, User};
+use crate::domain::entity::{Category, Order, Service, User};
 use crate::domain::value_objects::{CategoryId, Money, ServiceId, ServiceType};
 use std::sync::Arc;
 
@@ -204,6 +204,48 @@ impl AppState {
 
         for srv in services {
             let _ = self.service_repo.save(&srv).await;
+        }
+
+        // Seed Demo Orders
+        if let Ok(mut order1) = Order::create(
+            demo_user.id.clone(),
+            ServiceId::from_string("SRV-101"),
+            "https://instagram.com/fashion_indo".to_string(),
+            1_000,
+            Money::from_idr(15_500),
+            None,
+        ) {
+            order1.set_processing("SMM-98214".to_string());
+            let _ = self.order_repo.save(&order1).await;
+        }
+
+        if let Ok(mut order2) = Order::create(
+            demo_user.id.clone(),
+            ServiceId::from_string("SRV-201"),
+            "https://tiktok.com/@selebtok_id".to_string(),
+            500,
+            Money::from_idr(22_000),
+            None,
+        ) {
+            order2.set_processing("SMM-98215".to_string());
+            order2.update_status(
+                crate::domain::value_objects::OrderStatus::Success,
+                1_200,
+                0,
+                None,
+            );
+            let _ = self.order_repo.save(&order2).await;
+        }
+
+        if let Ok(order3) = Order::create(
+            demo_user.id.clone(),
+            ServiceId::from_string("SRV-102"),
+            "https://instagram.com/p/DF1289x".to_string(),
+            2_000,
+            Money::from_idr(4_500),
+            None,
+        ) {
+            let _ = self.order_repo.save(&order3).await;
         }
     }
 }

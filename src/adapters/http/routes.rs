@@ -52,6 +52,12 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/api/admin/categories/:id",
             put(admin_update_category).delete(admin_delete_category),
         )
+        // Admin Order Management
+        .route("/api/admin/orders", get(admin_list_all_orders))
+        .route(
+            "/api/admin/orders/:id/status",
+            post(admin_update_order_status),
+        )
         .layer(cors)
         .with_state(state)
 }

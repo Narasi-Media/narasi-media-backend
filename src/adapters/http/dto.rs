@@ -1,4 +1,4 @@
-use crate::domain::value_objects::{DepositMethod, ServiceType};
+use crate::domain::value_objects::{DepositMethod, OrderStatus, ServiceType};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -88,6 +88,14 @@ pub struct UpdateCategoryRequest {
     pub name: String,
     pub icon: String,
     pub sort_order: u32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateOrderStatusRequest {
+    pub status: OrderStatus,
+    pub remains: Option<u32>,
+    pub start_count: Option<u32>,
+    pub error_message: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
