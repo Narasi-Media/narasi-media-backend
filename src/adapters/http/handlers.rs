@@ -1,7 +1,8 @@
 use crate::adapters::http::dto::{
     ApiResponse, BatchMarkupRequest, CreateCategoryRequest, CreateServiceRequest,
     MassOrderRequest, PlaceOrderRequest, RejectDepositRequest, RequestDepositRequest,
-    SubmitDepositProofRequest, UpdateCategoryRequest, UpdateOrderStatusRequest, UpdateServiceRequest,
+    SubmitDepositProofRequest, UpdateCategoryRequest, UpdateOrderStatusRequest, UpdatePasswordRequest,
+    UpdateProfileRequest, UpdateServiceRequest, UserProfileDto,
 };
 use crate::application::use_cases::{PlaceOrderInput, RequestDepositInput};
 use crate::domain::entity::{Category, Service};
@@ -579,6 +580,196 @@ pub async fn admin_update_order_status(
 
     match state.order_repo.save(&order).await {
         Ok(_) => Json(ApiResponse::ok(order, "Status pesanan berhasil diperbarui")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn get_user_profile(
+    State(state): State<Arc<AppState>>,
+    Path(username): Path<String>,
+) -> impl IntoResponse {
+    let user = match state.user_repo.find_by_username(&username).await {
+        Ok(Some(u)) => u,
+        _ => {
+            let user_id = UserId::from_string(username.clone());
+            match state.user_repo.find_by_id(&user_id).await {
+                Ok(Some(u)) => u,
+                _ => {
+                    return (
+                        StatusCode::NOT_FOUND,
+                        Json(ApiResponse::<()>::error("Pengguna tidak ditemukan")),
+                    )
+                        .into_response()
+                }
+            }
+        }
+    };
+
+    let orders = state
+        .order_repo
+        .list_by_user(&user.id)
+        .await
+        .unwrap_or_default();
+    let deposits = state
+        .deposit_repo
+        .list_by_user(&user.id)
+        .await
+        .unwrap_or_default();
+
+    let total_spent = orders.iter().map(|o| o.total_price.amount()).sum::<i64>();
+    let total_deposit = deposits
+        .iter()
+        .filter(|d| d.status == crate::domain::value_objects::DepositStatus::Success)
+        .map(|d| d.balance_credited.amount())
+        .sum::<i64>();
+
+    let tier = if total_spent > 2_500_000 {
+        "VIP Platinum Partner"
+    } else if total_spent > 500_000 {
+        "VIP Gold Partner"
+    } else {
+        "Member Reguler"
+    };
+
+    let profile = UserProfileDto {
+        id: user.id.to_string(),
+        username: user.username.clone(),
+        full_name: user.full_name.clone(),
+        email: user.email.clone(),
+        whatsapp_number: user.whatsapp_number.clone(),
+        telegram_username: user.telegram_username.clone(),
+        role: format!("{:?}", user.role),
+        tier: tier.to_string(),
+        balance: user.balance.amount(),
+        balance_formatted: user.balance.format_idr(),
+        total_orders: orders.len(),
+        total_spent,
+        total_deposit,
+        api_key: user
+            .api_key
+            .unwrap_or_else(|| "bm_live_9f82bc7190d8a43e7b1a20c3ef".to_string()),
+        webhook_url: user.webhook_url.clone(),
+        two_factor_enabled: user.two_factor_enabled,
+        registered_at: user.created_at.format("%d %b %Y").to_string(),
+    };
+
+    Json(ApiResponse::ok(profile, "Profil berhasil dimuat")).into_response()
+}
+
+pub async fn update_user_profile(
+    State(state): State<Arc<AppState>>,
+    Path(username): Path<String>,
+    Json(payload): Json<UpdateProfileRequest>,
+) -> impl IntoResponse {
+    let mut user = match state.user_repo.find_by_username(&username).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::<()>::error("Pengguna tidak ditemukan")),
+            )
+                .into_response()
+        }
+    };
+
+    if let Some(name) = payload.full_name {
+        user.full_name = name;
+    }
+    if let Some(email) = payload.email {
+        user.email = email;
+    }
+    if let Some(wa) = payload.whatsapp_number {
+        user.whatsapp_number = wa;
+    }
+    if let Some(tg) = payload.telegram_username {
+        user.telegram_username = Some(tg);
+    }
+    if let Some(webhook) = payload.webhook_url {
+        user.webhook_url = Some(webhook);
+    }
+    if let Some(tfa) = payload.two_factor_enabled {
+        user.two_factor_enabled = tfa;
+    }
+    user.updated_at = chrono::Utc::now();
+
+    match state.user_repo.save(&user).await {
+        Ok(_) => Json(ApiResponse::ok(user, "Profil berhasil diperbarui")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn regenerate_api_key(
+    State(state): State<Arc<AppState>>,
+    Path(username): Path<String>,
+) -> impl IntoResponse {
+    let mut user = match state.user_repo.find_by_username(&username).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::<()>::error("Pengguna tidak ditemukan")),
+            )
+                .into_response()
+        }
+    };
+
+    let new_key = format!("bm_live_{}", uuid::Uuid::new_v4().simple());
+    user.api_key = Some(new_key.clone());
+    user.updated_at = chrono::Utc::now();
+
+    match state.user_repo.save(&user).await {
+        Ok(_) => Json(ApiResponse::ok(
+            new_key,
+            "API Key baru berhasil di-generate",
+        ))
+        .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn update_password(
+    State(state): State<Arc<AppState>>,
+    Path(username): Path<String>,
+    Json(payload): Json<UpdatePasswordRequest>,
+) -> impl IntoResponse {
+    let mut user = match state.user_repo.find_by_username(&username).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::<()>::error("Pengguna tidak ditemukan")),
+            )
+                .into_response()
+        }
+    };
+
+    if payload.new_password.len() < 6 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error(
+                "Kata sandi baru minimal 6 karakter",
+            )),
+        )
+            .into_response();
+    }
+
+    user.password_hash = format!("hashed_{}", payload.new_password);
+    user.updated_at = chrono::Utc::now();
+
+    match state.user_repo.save(&user).await {
+        Ok(_) => Json(ApiResponse::ok((), "Kata sandi berhasil diperbarui")).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::<()>::error(e.to_string())),

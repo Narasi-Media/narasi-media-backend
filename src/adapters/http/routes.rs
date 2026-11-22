@@ -58,6 +58,19 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/api/admin/orders/:id/status",
             post(admin_update_order_status),
         )
+        // User Profile & Settings
+        .route(
+            "/api/user/profile/:username",
+            get(get_user_profile).put(update_user_profile),
+        )
+        .route(
+            "/api/user/profile/:username/api-key",
+            post(regenerate_api_key),
+        )
+        .route(
+            "/api/user/profile/:username/password",
+            post(update_password),
+        )
         .layer(cors)
         .with_state(state)
 }

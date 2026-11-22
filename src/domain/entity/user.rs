@@ -25,6 +25,14 @@ pub struct User {
     pub password_hash: String,
     pub balance: Money,
     pub role: UserRole,
+    #[serde(default)]
+    pub api_key: Option<String>,
+    #[serde(default)]
+    pub webhook_url: Option<String>,
+    #[serde(default)]
+    pub two_factor_enabled: bool,
+    #[serde(default)]
+    pub telegram_username: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -47,6 +55,10 @@ impl User {
             password_hash,
             balance: Money::ZERO,
             role: UserRole::Member,
+            api_key: Some(format!("bm_live_{}", uuid::Uuid::new_v4().simple())),
+            webhook_url: None,
+            two_factor_enabled: true,
+            telegram_username: None,
             created_at: now,
             updated_at: now,
         }

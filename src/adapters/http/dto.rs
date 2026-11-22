@@ -98,6 +98,43 @@ pub struct UpdateOrderStatusRequest {
     pub error_message: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserProfileDto {
+    pub id: String,
+    pub username: String,
+    pub full_name: String,
+    pub email: String,
+    pub whatsapp_number: String,
+    pub telegram_username: Option<String>,
+    pub role: String,
+    pub tier: String,
+    pub balance: i64,
+    pub balance_formatted: String,
+    pub total_orders: usize,
+    pub total_spent: i64,
+    pub total_deposit: i64,
+    pub api_key: String,
+    pub webhook_url: Option<String>,
+    pub two_factor_enabled: bool,
+    pub registered_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateProfileRequest {
+    pub full_name: Option<String>,
+    pub email: Option<String>,
+    pub whatsapp_number: Option<String>,
+    pub telegram_username: Option<String>,
+    pub webhook_url: Option<String>,
+    pub two_factor_enabled: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdatePasswordRequest {
+    pub current_password: String,
+    pub new_password: String,
+}
+
 #[derive(Debug, Serialize)]
 pub struct ApiResponse<T> {
     pub success: bool,
