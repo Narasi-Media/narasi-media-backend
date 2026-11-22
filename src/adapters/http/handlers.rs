@@ -1,5 +1,5 @@
 use crate::adapters::http::dto::{
-    ApiResponse, BatchMarkupRequest, CreateCategoryRequest, CreateServiceRequest,
+    AdjustBalanceRequest, ApiResponse, BatchMarkupRequest, CreateCategoryRequest, CreateServiceRequest,
     MassOrderRequest, PlaceOrderRequest, RejectDepositRequest, RequestDepositRequest,
     SubmitDepositProofRequest, UpdateCategoryRequest, UpdateOrderStatusRequest, UpdatePasswordRequest,
     UpdateProfileRequest, UpdateServiceRequest, UserProfileDto,
@@ -770,6 +770,42 @@ pub async fn update_password(
 
     match state.user_repo.save(&user).await {
         Ok(_) => Json(ApiResponse::ok((), "Kata sandi berhasil diperbarui")).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(e.to_string())),
+        )
+            .into_response(),
+    }
+}
+
+pub async fn adjust_user_balance(
+    State(state): State<Arc<AppState>>,
+    Path(username): Path<String>,
+    Json(payload): Json<AdjustBalanceRequest>,
+) -> impl IntoResponse {
+    let mut user = match state.user_repo.find_by_username(&username).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::<()>::error("Pengguna tidak ditemukan")),
+            )
+                .into_response()
+        }
+    };
+
+    user.balance = Money::from_idr(payload.amount);
+    user.updated_at = chrono::Utc::now();
+
+    match state.user_repo.save(&user).await {
+        Ok(_) => Json(ApiResponse::ok(
+            serde_json::json!({
+                "balance": user.balance.amount(),
+                "balance_formatted": user.balance.format_idr(),
+            }),
+            "Saldo pengguna berhasil disesuaikan",
+        ))
+        .into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::<()>::error(e.to_string())),

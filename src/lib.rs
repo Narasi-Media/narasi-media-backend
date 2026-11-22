@@ -98,8 +98,8 @@ impl AppState {
             "hashed_pass".to_string(),
         );
         demo_user.credit(
-            Money::from_idr(250_000),
-            "Saldo Awal Demo Akun".to_string(),
+            Money::from_idr(500_000),
+            "Saldo Awal Akun".to_string(),
         );
         let _ = self.user_repo.save(&demo_user).await;
 

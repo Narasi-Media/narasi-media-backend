@@ -9,7 +9,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let state = Arc::new(AppState::new());
     state.seed_demo_data().await;
-    println!("🌱 Demo data seeded (User: 'regiami' with initial balance Rp 250.000)");
+    println!("🌱 Demo data seeded (User: 'regiami' with initial balance Rp 500.000)");
 
     let app = create_router(state);
 

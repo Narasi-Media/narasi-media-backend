@@ -135,6 +135,11 @@ pub struct UpdatePasswordRequest {
     pub new_password: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct AdjustBalanceRequest {
+    pub amount: i64,
+}
+
 #[derive(Debug, Serialize)]
 pub struct ApiResponse<T> {
     pub success: bool,

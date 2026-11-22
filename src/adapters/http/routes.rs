@@ -71,6 +71,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/api/user/profile/:username/password",
             post(update_password),
         )
+        .route(
+            "/api/user/profile/:username/balance",
+            post(adjust_user_balance),
+        )
         .layer(cors)
         .with_state(state)
 }
