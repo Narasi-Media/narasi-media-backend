@@ -159,7 +159,7 @@ pub async fn request_deposit(
         user_id: UserId::from_string(payload.user_id),
         method: payload.method,
         amount: Money::from_idr(payload.amount),
-        bonus_percentage: 5.0, // Default 5% promo bonus
+        bonus_percentage: 0.0, // No promo bonus (1:1 direct deposit)
     };
 
     match state.request_deposit_uc.execute(input).await {
