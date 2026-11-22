@@ -26,17 +26,23 @@ pub async fn get_dashboard_stats(
     State(state): State<Arc<AppState>>,
     Path(user_id_str): Path<String>,
 ) -> impl IntoResponse {
-    let user_id = UserId::from_string(user_id_str);
-    let user = match state.user_repo.find_by_id(&user_id).await {
+    let user = match state.user_repo.find_by_username(&user_id_str).await {
         Ok(Some(u)) => u,
         _ => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::<()>::error("User not found")),
-            )
-                .into_response()
+            let user_id = UserId::from_string(user_id_str);
+            match state.user_repo.find_by_id(&user_id).await {
+                Ok(Some(u)) => u,
+                _ => {
+                    return (
+                        StatusCode::NOT_FOUND,
+                        Json(ApiResponse::<()>::error("User not found")),
+                    )
+                        .into_response()
+                }
+            }
         }
     };
+    let user_id = user.id.clone();
 
     let orders = state
         .order_repo
