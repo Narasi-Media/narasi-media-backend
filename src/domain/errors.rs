@@ -31,4 +31,7 @@ pub enum DomainError {
 
     #[error("Validasi gagal: {0}")]
     ValidationError(String),
+
+    #[error("Kesalahan infrastruktur database: {0}")]
+    Infrastructure(String),
 }

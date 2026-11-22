@@ -6,6 +6,10 @@ use crate::adapters::in_memory::{
     InMemoryDepositRepository, InMemoryOrderRepository, InMemoryServiceRepository,
     InMemoryTicketRepository, InMemoryUserRepository, MockSmmProviderGateway,
 };
+use crate::adapters::supabase::{
+    SupabaseClient, SupabaseDepositRepository, SupabaseOrderRepository,
+    SupabaseServiceRepository, SupabaseUserRepository,
+};
 use crate::application::ports::{
     DepositRepository, OrderRepository, ServiceRepository, SmmProviderGateway, TicketRepository,
     UserRepository,
@@ -85,6 +89,65 @@ impl AppState {
             approve_deposit_uc,
             sync_order_uc,
             claim_refill_uc,
+        }
+    }
+
+    pub fn with_supabase(client: SupabaseClient) -> Self {
+        let client_arc = Arc::new(client);
+        let user_repo: Arc<dyn UserRepository> = Arc::new(SupabaseUserRepository::new(client_arc.clone()));
+        let order_repo: Arc<dyn OrderRepository> = Arc::new(SupabaseOrderRepository::new(client_arc.clone()));
+        let service_repo: Arc<dyn ServiceRepository> = Arc::new(SupabaseServiceRepository::new(client_arc.clone()));
+        let deposit_repo: Arc<dyn DepositRepository> = Arc::new(SupabaseDepositRepository::new(client_arc.clone()));
+        let ticket_repo: Arc<dyn TicketRepository> = Arc::new(InMemoryTicketRepository::new());
+        let provider_gateway: Arc<dyn SmmProviderGateway> = Arc::new(MockSmmProviderGateway);
+
+        let place_order_uc = Arc::new(PlaceOrderUseCase::new(
+            user_repo.clone(),
+            order_repo.clone(),
+            service_repo.clone(),
+            Some(provider_gateway.clone()),
+        ));
+
+        let mass_order_uc = Arc::new(MassOrderUseCase::new(place_order_uc.clone()));
+        let request_deposit_uc = Arc::new(RequestDepositUseCase::new(deposit_repo.clone()));
+        let approve_deposit_uc = Arc::new(ApproveDepositUseCase::new(
+            deposit_repo.clone(),
+            user_repo.clone(),
+        ));
+        let sync_order_uc = Arc::new(SyncOrderUseCase::new(
+            order_repo.clone(),
+            user_repo.clone(),
+            provider_gateway.clone(),
+        ));
+        let claim_refill_uc = Arc::new(ClaimRefillUseCase::new(
+            order_repo.clone(),
+            service_repo.clone(),
+            provider_gateway.clone(),
+        ));
+
+        Self {
+            user_repo,
+            order_repo,
+            service_repo,
+            deposit_repo,
+            ticket_repo,
+            provider_gateway,
+            place_order_uc,
+            mass_order_uc,
+            request_deposit_uc,
+            approve_deposit_uc,
+            sync_order_uc,
+            claim_refill_uc,
+        }
+    }
+
+    pub fn from_env() -> Self {
+        if let Some(supabase_client) = SupabaseClient::from_env() {
+            println!("⚡ [Adapter] Terhubung ke Supabase Cloud REST Database!");
+            Self::with_supabase(supabase_client)
+        } else {
+            println!("💾 [Adapter] Menggunakan In-Memory DDD Repository (Lokal/Dev mode)");
+            Self::new()
         }
     }
 

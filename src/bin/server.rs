@@ -7,9 +7,11 @@ use std::sync::Arc;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Starting Buzzer Media Backend Server (VPS / Standalone mode)...");
 
-    let state = Arc::new(AppState::new());
-    state.seed_demo_data().await;
-    println!("🌱 Demo data seeded (User: 'regiami' with initial balance Rp 500.000)");
+    let state = Arc::new(AppState::from_env());
+    if std::env::var("SUPABASE_URL").is_err() {
+        state.seed_demo_data().await;
+        println!("🌱 Demo data seeded (User: 'regiami' with initial balance Rp 500.000)");
+    }
 
     let app = create_router(state);
 
