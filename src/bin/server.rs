@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    dotenvy::dotenv().ok();
     println!("🚀 Starting Narasi Media Backend Server (VPS / Standalone mode)...");
 
     let state = Arc::new(AppState::from_env());
