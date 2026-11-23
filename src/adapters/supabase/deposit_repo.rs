@@ -120,7 +120,7 @@ impl DepositRepository for SupabaseDepositRepository {
         let filter = format!("eq.{}", user_id);
         let rows: Vec<DepositRow> = self
             .client
-            .select("deposits", &[("user_id", &filter), ("order", "created_at.desc")])
+            .select("deposits", &[("user_id", &filter), ("order", "created_at.desc"), ("limit", "100")])
             .await?;
 
         Ok(rows.into_iter().map(Into::into).collect())
@@ -134,6 +134,7 @@ impl DepositRepository for SupabaseDepositRepository {
                 &[
                     ("status", "in.(Pending,WaitingVerification)"),
                     ("order", "created_at.desc"),
+                    ("limit", "100"),
                 ],
             )
             .await?;
@@ -144,7 +145,7 @@ impl DepositRepository for SupabaseDepositRepository {
     async fn list_all(&self) -> Result<Vec<Deposit>, DomainError> {
         let rows: Vec<DepositRow> = self
             .client
-            .select("deposits", &[("order", "created_at.desc")])
+            .select("deposits", &[("order", "created_at.desc"), ("limit", "200")])
             .await?;
 
         Ok(rows.into_iter().map(Into::into).collect())

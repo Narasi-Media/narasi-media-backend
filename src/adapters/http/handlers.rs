@@ -110,11 +110,20 @@ pub async fn place_order(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<PlaceOrderRequest>,
 ) -> impl IntoResponse {
+    let target = payload.target.trim().to_string();
+    if target.is_empty() || target.len() > 500 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("Target link/username tidak valid (wajib diisi, maksimal 500 karakter)")),
+        )
+            .into_response();
+    }
+
     let user_id = resolve_user_id(&state, &payload.user_id).await;
     let input = PlaceOrderInput {
         user_id,
         service_id: ServiceId::from_string(payload.service_id),
-        target: payload.target,
+        target,
         quantity: payload.quantity,
         custom_comments: payload.custom_comments,
     };
@@ -206,7 +215,13 @@ pub async fn submit_deposit_proof(
 
     match deposit.submit_proof(payload.sender_name, payload.proof_image_url) {
         Ok(_) => {
-            let _ = state.deposit_repo.save(&deposit).await;
+            if let Err(e) = state.deposit_repo.save(&deposit).await {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::<()>::error(format!("Gagal menyimpan bukti pembayaran: {}", e))),
+                )
+                    .into_response();
+            }
             Json(ApiResponse::ok(
                 deposit,
                 "Bukti pembayaran berhasil diunggah, menunggu verifikasi admin",
@@ -791,6 +806,14 @@ pub async fn adjust_user_balance(
     Path(username): Path<String>,
     Json(payload): Json<AdjustBalanceRequest>,
 ) -> impl IntoResponse {
+    if payload.amount < 0 || payload.amount > 1_000_000_000 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<()>::error("Jumlah saldo harus antara 0 dan Rp 1.000.000.000")),
+        )
+            .into_response();
+    }
+
     let mut user = match state.user_repo.find_by_username(&username).await {
         Ok(Some(u)) => u,
         _ => {

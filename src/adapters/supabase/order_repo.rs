@@ -111,7 +111,7 @@ impl OrderRepository for SupabaseOrderRepository {
         let filter = format!("eq.{}", user_id);
         let rows: Vec<OrderRow> = self
             .client
-            .select("orders", &[("user_id", &filter), ("order", "created_at.desc")])
+            .select("orders", &[("user_id", &filter), ("order", "created_at.desc"), ("limit", "100")])
             .await?;
 
         Ok(rows.into_iter().map(Into::into).collect())
@@ -120,7 +120,7 @@ impl OrderRepository for SupabaseOrderRepository {
     async fn list_all(&self) -> Result<Vec<Order>, DomainError> {
         let rows: Vec<OrderRow> = self
             .client
-            .select("orders", &[("order", "created_at.desc")])
+            .select("orders", &[("order", "created_at.desc"), ("limit", "200")])
             .await?;
 
         Ok(rows.into_iter().map(Into::into).collect())
@@ -134,6 +134,7 @@ impl OrderRepository for SupabaseOrderRepository {
                 &[
                     ("status", "in.(Pending,Processing,Inprogress)"),
                     ("order", "created_at.desc"),
+                    ("limit", "100"),
                 ],
             )
             .await?;
