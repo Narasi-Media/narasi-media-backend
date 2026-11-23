@@ -644,14 +644,6 @@ pub async fn get_user_profile(
         .map(|d| d.balance_credited.amount())
         .sum::<i64>();
 
-    let tier = if total_spent > 2_500_000 {
-        "VIP Platinum Partner"
-    } else if total_spent > 500_000 {
-        "VIP Gold Partner"
-    } else {
-        "Member Reguler"
-    };
-
     let profile = UserProfileDto {
         id: user.id.to_string(),
         username: user.username.clone(),
@@ -660,7 +652,6 @@ pub async fn get_user_profile(
         whatsapp_number: user.whatsapp_number.clone(),
         telegram_username: user.telegram_username.clone(),
         role: format!("{:?}", user.role),
-        tier: tier.to_string(),
         balance: user.balance.amount(),
         balance_formatted: user.balance.format_idr(),
         total_orders: orders.len(),

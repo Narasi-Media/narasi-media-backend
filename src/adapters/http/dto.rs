@@ -107,7 +107,6 @@ pub struct UserProfileDto {
     pub whatsapp_number: String,
     pub telegram_username: Option<String>,
     pub role: String,
-    pub tier: String,
     pub balance: i64,
     pub balance_formatted: String,
     pub total_orders: usize,
