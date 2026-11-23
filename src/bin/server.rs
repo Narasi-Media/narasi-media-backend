@@ -1,11 +1,11 @@
-use buzzer_media_backend::adapters::http::routes::create_router;
-use buzzer_media_backend::AppState;
+use narasi_media_backend::adapters::http::routes::create_router;
+use narasi_media_backend::AppState;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Starting Buzzer Media Backend Server (VPS / Standalone mode)...");
+    println!("🚀 Starting Narasi Media Backend Server (VPS / Standalone mode)...");
 
     let state = Arc::new(AppState::from_env());
     if std::env::var("SUPABASE_URL").is_err() {

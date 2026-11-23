@@ -1,5 +1,5 @@
 -- ==============================================================================
--- BUZZER MEDIA - SUPABASE POSTGRESQL PRODUCTION SCHEMA
+-- NARASI MEDIA - SUPABASE POSTGRESQL PRODUCTION SCHEMA
 -- Deployment Target: Supabase (PostgreSQL 15+)
 -- Hexagonal DDD Entity Mapping & RLS Policy
 -- ==============================================================================

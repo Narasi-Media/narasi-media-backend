@@ -1,6 +1,6 @@
-use buzzer_media_backend::domain::entity::{Deposit, Service, User};
-use buzzer_media_backend::domain::errors::DomainError;
-use buzzer_media_backend::domain::value_objects::{
+use narasi_media_backend::domain::entity::{Deposit, Service, User};
+use narasi_media_backend::domain::errors::DomainError;
+use narasi_media_backend::domain::value_objects::{
     CategoryId, DepositMethod, DepositStatus, Money, ServiceId, ServiceType, UserId,
 };
 

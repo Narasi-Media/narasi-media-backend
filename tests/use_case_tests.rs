@@ -1,11 +1,11 @@
-use buzzer_media_backend::application::use_cases::{
+use narasi_media_backend::application::use_cases::{
     PlaceOrderInput, RequestDepositInput,
 };
-use buzzer_media_backend::domain::entity::{Category, Service, User};
-use buzzer_media_backend::domain::value_objects::{
+use narasi_media_backend::domain::entity::{Category, Service, User};
+use narasi_media_backend::domain::value_objects::{
     CategoryId, DepositMethod, DepositStatus, Money, OrderStatus, ServiceId, ServiceType,
 };
-use buzzer_media_backend::AppState;
+use narasi_media_backend::AppState;
 use std::sync::Arc;
 
 #[tokio::test]

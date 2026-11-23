@@ -1,16 +1,16 @@
 [package]
-name = "buzzer-media-backend"
+name = "narasi-media-backend"
 version = "0.1.0"
 edition = "2021"
-authors = ["Buzzer Media Team"]
-description = "High-performance SMM and Buzzer Platform Backend designed with Domain-Driven Design (DDD) & TDD"
+authors = ["Narasi Media Team"]
+description = "High-performance SMM and Digital Media Platform Backend designed with Domain-Driven Design (DDD) & TDD"
 
 [lib]
-name = "buzzer_media_backend"
+name = "narasi_media_backend"
 path = "src/lib.rs"
 
 [[bin]]
-name = "buzzer-server"
+name = "narasi-server"
 path = "src/bin/server.rs"
 
 [dependencies]

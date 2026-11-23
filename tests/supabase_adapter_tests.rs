@@ -1,6 +1,6 @@
-use buzzer_media_backend::adapters::supabase::SupabaseClient;
-use buzzer_media_backend::domain::entity::{Deposit, Order, Service, User};
-use buzzer_media_backend::domain::value_objects::{
+use narasi_media_backend::adapters::supabase::SupabaseClient;
+use narasi_media_backend::domain::entity::{Deposit, Order, Service, User};
+use narasi_media_backend::domain::value_objects::{
     CategoryId, DepositMethod, DepositStatus, Money, OrderStatus, ServiceId, UserId,
 };
 
@@ -32,7 +32,7 @@ fn test_user_entity_mapping() {
     let mut user = User::new(
         "testreseller".to_string(),
         "Test Reseller Indonesia".to_string(),
-        "test@buzzer.media".to_string(),
+        "test@narasi.media".to_string(),
         "081234567890".to_string(),
         "secure_hash".to_string(),
     );
@@ -50,7 +50,7 @@ fn test_service_entity_mapping() {
         provider_id: Some("prov-1".to_string()),
         provider_service_id: Some("101".to_string()),
         name: "Instagram Likes High Quality".to_string(),
-        service_type: buzzer_media_backend::domain::value_objects::ServiceType::Default,
+        service_type: narasi_media_backend::domain::value_objects::ServiceType::Default,
         price_original: Money::from_idr(5000),
         price_user: Money::from_idr(8500),
         min_order: 100,

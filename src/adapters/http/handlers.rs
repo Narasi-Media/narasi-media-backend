@@ -19,7 +19,15 @@ use axum::{
 use std::sync::Arc;
 
 pub async fn health_check() -> impl IntoResponse {
-    Json(ApiResponse::ok("Buzzer Media Backend is running", "Healthy"))
+    Json(ApiResponse::ok("Narasi Media Backend is running", "Healthy"))
+}
+
+async fn resolve_user_id(state: &AppState, id_or_username: &str) -> UserId {
+    if let Ok(Some(u)) = state.user_repo.find_by_username(id_or_username).await {
+        u.id
+    } else {
+        UserId::from_string(id_or_username.to_string())
+    }
 }
 
 pub async fn get_dashboard_stats(
@@ -63,6 +71,7 @@ pub async fn get_dashboard_stats(
         .sum::<i64>();
 
     let stats = serde_json::json!({
+        "user_id": user.id.as_str(),
         "balance": user.balance.amount(),
         "balance_formatted": user.balance.format_idr(),
         "total_orders": orders.len(),
@@ -101,8 +110,9 @@ pub async fn place_order(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<PlaceOrderRequest>,
 ) -> impl IntoResponse {
+    let user_id = resolve_user_id(&state, &payload.user_id).await;
     let input = PlaceOrderInput {
-        user_id: UserId::from_string(payload.user_id),
+        user_id,
         service_id: ServiceId::from_string(payload.service_id),
         target: payload.target,
         quantity: payload.quantity,
@@ -127,7 +137,7 @@ pub async fn mass_order(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<MassOrderRequest>,
 ) -> impl IntoResponse {
-    let user_id = UserId::from_string(payload.user_id);
+    let user_id = resolve_user_id(&state, &payload.user_id).await;
     let result = state
         .mass_order_uc
         .execute(user_id, &payload.orders_raw)
@@ -140,7 +150,7 @@ pub async fn list_user_orders(
     State(state): State<Arc<AppState>>,
     Path(user_id_str): Path<String>,
 ) -> impl IntoResponse {
-    let user_id = UserId::from_string(user_id_str);
+    let user_id = resolve_user_id(&state, &user_id_str).await;
     match state.order_repo.list_by_user(&user_id).await {
         Ok(orders) => Json(ApiResponse::ok(orders, "Orders retrieved")).into_response(),
         Err(e) => (
@@ -155,8 +165,9 @@ pub async fn request_deposit(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<RequestDepositRequest>,
 ) -> impl IntoResponse {
+    let user_id = resolve_user_id(&state, &payload.user_id).await;
     let input = RequestDepositInput {
-        user_id: UserId::from_string(payload.user_id),
+        user_id,
         method: payload.method,
         amount: Money::from_idr(payload.amount),
         bonus_percentage: 0.0, // No promo bonus (1:1 direct deposit)

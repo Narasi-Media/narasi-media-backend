@@ -156,7 +156,7 @@ impl AppState {
         let mut demo_user = User::new(
             "regiami".to_string(),
             "Regi Ami".to_string(),
-            "regi@buzzerpanel.id".to_string(),
+            "regi@narasi.media".to_string(),
             "081234567890".to_string(),
             "hashed_pass".to_string(),
         );
