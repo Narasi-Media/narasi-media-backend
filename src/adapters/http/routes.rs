@@ -27,6 +27,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             post(submit_deposit_proof),
         )
         // Admin Deposit routes
+        .route("/api/admin/deposits", get(admin_list_pending_deposits))
         .route("/api/admin/deposits/pending", get(admin_list_pending_deposits))
         .route(
             "/api/admin/deposits/:deposit_id/approve",
