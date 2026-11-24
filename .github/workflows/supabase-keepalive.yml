@@ -1,0 +1,23 @@
+name: Supabase Free Plan Keep-Alive Daily Ping
+
+on:
+  schedule:
+    # Runs everyday at 02:00 UTC (09:00 WIB) to keep Supabase projects active
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    name: Supabase Activity & Healthcheck Ping
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Cloudflare Worker API Keep-Alive Endpoint
+        run: |
+          echo "=== 1. Pinging Cloudflare Worker Keep-Alive Endpoint ==="
+          curl -s -f "https://narasi-media-api.narasi-media.workers.dev/api/cron/keepalive" || echo "Ping finished"
+
+      - name: Direct Ping to Supabase PROD REST API
+        run: |
+          echo "=== 2. Pinging Supabase PROD REST API ==="
+          curl -s -f -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1ZGFqaHNvbGtnbHR0cG51YWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0MjgxNTgsImV4cCI6MjExMTAwNDE1OH0.ae4G8QiOJnnwGl-Qd5Nx1ROta4eY4vbGXKaayhSF51g" \
+            "https://ludajhsolkglttpnuajz.supabase.co/rest/v1/services?select=id&limit=1" || echo "Ping finished"
